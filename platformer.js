@@ -56,8 +56,8 @@
       ACCEL    = 1/2,     // default take 1/2 second to reach maxdx (horizontal acceleration)
       FRICTION = 1/6,     // default take 1/6 second to stop from maxdx (horizontal friction)
       IMPULSE  = 1500,    // default player jump impulse
-      COLOR    = { BLACK: '#000000', YELLOW: '#ECD078', BRICK: '#D95B43', PINK: '#C02942', PURPLE: '#542437', GREY: '#333', SLATE: '#53777A', GOLD: 'gold' },
-      COLORS   = [ COLOR.YELLOW, COLOR.BRICK, COLOR.PINK, COLOR.PURPLE, COLOR.GREY ],
+      COLOR    = { BLACK: '#000000', YELLOW: '#ECD078', BRICK: '#D95B43', PINK: '#C02942', PURPLE: '#542437', GREY: '#333', SLATE: '#53777A', GOLD: 'gold', RED: 'red' },
+      COLORS   = [ COLOR.YELLOW, COLOR.BRICK, COLOR.PINK, COLOR.PURPLE, COLOR.GREY, COLOR.RED ],
       KEY      = { SPACE: 32, LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40 };
       
   var fps      = 60,
@@ -66,8 +66,11 @@
       ctx      = canvas.getContext('2d'),
       width    = canvas.width  = MAP.tw * TILE,
       height   = canvas.height = MAP.th * TILE,
-      level = 0;
-      max_level = 2;
+      play = false,
+      dead = false,
+      level = 1,
+      max_level = 2,
+      live = 3,
       player   = {},
       monsters = [],
       treasure = [],
@@ -110,11 +113,12 @@
   }
 
   function updateMap(){
-    level++;
-    get(`level${level}.json`, function(req) {
-      setup(JSON.parse(req.responseText));
-      frame();
-    });
+    //if (live != 0){ //My Update
+      get(`level${level}.json`, function(req) {
+        setup(JSON.parse(req.responseText));
+        frame();
+      });
+    //}
   }
 
   function updateMonsters(dt) {
@@ -153,12 +157,17 @@
     player.x = player.start.x;
     player.y = player.start.y;
     player.dx = player.dy = 0;
+    live--;
+    gameOver();
   }
 
   function levelClear(){
     if (player.collected == treasure.length && level < max_level){
       reset();
+      level++;
       updateMap();
+    } else {
+      winner();
     }
   }
 
@@ -172,6 +181,27 @@
     //  nextSequence()
     //}, 1000);
     
+  }
+
+  function gameOver(){
+    if (live <= 0){
+      dead = true
+      $("#display").css("display", "flex");
+      $("#canvas").css("display", "none"); 
+      $("#display h1").html("Game Over");
+      $("#start").html("Restart");
+    }
+  }
+
+  function winner(){
+    if (player.collected == treasure.length && level == max_level){
+      dead = true
+      player = {};
+      $("#display").css("display", "flex");
+      $("#canvas").css("display", "none"); 
+      $("#display h1").html("Winner");
+      $("#start").html("Restart");
+    }
   }
 
   function updateEntity(entity, dt) {
@@ -301,13 +331,17 @@
 
     var n, max;
 
+    ctx.fillStyle = COLOR.RED;
+    for(n = 0, max = live ; n < max ; n++)
+      ctx.fillRect(t2p(2 + n), t2p(2), TILE/2, TILE/2);
+
     ctx.fillStyle = COLOR.GOLD;
     for(n = 0, max = player.collected ; n < max ; n++)
-      ctx.fillRect(t2p(2 + n), t2p(2), TILE/2, TILE/2);
+      ctx.fillRect(t2p(2 + n), t2p(3), TILE/2, TILE/2);
 
     ctx.fillStyle = COLOR.SLATE;
     for(n = 0, max = player.killed ; n < max ; n++)
-      ctx.fillRect(t2p(2 + n), t2p(3), TILE/2, TILE/2);
+      ctx.fillRect(t2p(2 + n), t2p(4), TILE/2, TILE/2);
   }
 
   function renderMonsters(ctx, dt) {
@@ -413,18 +447,33 @@
       fpsmeter = new FPSMeter({ decimals: 0, graph: true, theme: 'dark', left: '5px' });
   
   function frame() {
-    fpsmeter.tickStart();
-    now = timestamp();
-    dt = dt + Math.min(1, (now - last) / 1000);
-    while(dt > step) {
-      dt = dt - step;
-      update(step);
-    }
-    render(ctx, counter, dt);
-    last = now;
-    counter++;
-    fpsmeter.tick();
-    requestAnimationFrame(frame, canvas);
+    //if (live != 0){
+      fpsmeter.tickStart();
+      now = timestamp();
+      dt = dt + Math.min(1, (now - last) / 1000);
+      while(dt > step) {
+        dt = dt - step;
+        update(step);
+      }
+      render(ctx, counter, dt);
+      last = now;
+      counter++;
+      fpsmeter.tick();
+      requestAnimationFrame(frame, canvas);
+    //}
+  }
+
+  function restart(){
+    live = 3;
+    level = 1;
+    player   = {};
+    monsters = [];
+    treasure = [];
+    lava     = []; //My Update
+    cells    = [];
+    get(`level${level}.json`, function(req) {
+      setup(JSON.parse(req.responseText));
+    });
   }
   
   document.addEventListener('keydown', function(ev) { return onkey(ev, ev.keyCode, true);  }, false);
@@ -433,12 +482,41 @@
   //canvas.style.backgroundColor = "blue";
 
   $("#start").on("click", function(){
-    $("#display").slideToggle();
-    setTimeout(function(){
+    level = 1;
+    $("#display").css("display", "none");
+    $("#canvas").css("display", "inline-block");
+    if (!play && !dead){
+      play = true
+      setTimeout(function(){
+        updateMap();
+      }, 100)
+    } else if (play && dead){
+      live = 3;
+      dead = false;
+      restart();
+    }
+  })
+
+  $("#menuBTN").on("click", function(){
+    if (play && !dead){
+      $("#display").css("display", "flex");
+      $("#canvas").css("display", "none"); 
+      $("#display h1").html("Tiny Platformer Game")
+      $("#start").html("Restart");
+    }
+
+  })
+
+  $("#restart").on("click", function(){
+
+    var game = $("#canvas").css("display"); 
+    if (game === "none" && play){
+      $("#display").css("display", "none");
       $("#canvas").css("display", "inline-block");
-      
-    }, 500)
-    updateMap();
+    }
+    if (play){
+      restart();
+    }
   })
 
 })();
