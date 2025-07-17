@@ -13,6 +13,14 @@
         color: white;
         text-align: center;
       }
+      #menu{
+        margin: 1em auto;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: aliceblue;
+      }
       #platformer {
         margin: 1em auto;
         position: relative;
@@ -61,6 +69,9 @@
           height: 384px;
           font-size: 7pt;
         }
+        #menu{
+          width: 512px;
+        }
         #start{
           font-size: 7pt;
         }
@@ -70,6 +81,9 @@
           width: 640px;
           height: 480px;
           font-size: 9pt;
+        }
+        #menu{
+          width: 640px;
         }
         #start{
           font-size: 9pt;
@@ -81,6 +95,9 @@
           height: 576px;
           font-size: 11pt;
         }
+        #menu{
+          width: 768px;
+        }
         #start{
           font-size: 11pt;
         }
@@ -90,6 +107,9 @@
           width: 896px;
           height: 672px;
           font-size: 13pt;
+        }
+        #menu{
+          width: 896px;
         }
         #start{
           font-size: 13pt;
@@ -101,7 +121,9 @@
           height: 768px;
           font-size: 15pt;
         }
-
+        #menu{
+          width: 1024px;
+        }
         #start{
           font-size: 15pt;
         }
@@ -113,6 +135,10 @@
   <body>
     <h1>Tiny Platformer Game</h1>
 
+    <div id="menu">
+      <button id="restart">Replay</button>
+      <button id="menuBTN">Menu</button>
+    </div>
     <div id="platformer">
       <div id="screen">
         <div id="display">
