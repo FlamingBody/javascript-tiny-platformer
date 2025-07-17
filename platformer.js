@@ -66,9 +66,12 @@
       ctx      = canvas.getContext('2d'),
       width    = canvas.width  = MAP.tw * TILE,
       height   = canvas.height = MAP.th * TILE,
+      level = 0;
+      max_level = 2;
       player   = {},
       monsters = [],
       treasure = [],
+      lava     = [], //My Update
       cells    = [];
   
   var t2p      = function(t)     { return t*TILE;                  },
@@ -88,6 +91,13 @@
       case KEY.SPACE: player.jump  = down; ev.preventDefault(); return false;
     }
   }
+
+  function reset(){
+    player   = {},
+    monsters = [],
+    treasure = [],
+    cells    = [];
+  }
   
   function update(dt) {
     updatePlayer(dt);
@@ -97,6 +107,14 @@
 
   function updatePlayer(dt) {
     updateEntity(player, dt);
+  }
+
+  function updateMap(){
+    level++;
+    get(`level${level}.json`, function(req) {
+      setup(JSON.parse(req.responseText));
+      frame();
+    });
   }
 
   function updateMonsters(dt) {
@@ -137,9 +155,23 @@
     player.dx = player.dy = 0;
   }
 
+  function levelClear(){
+    if (player.collected == treasure.length && level < max_level){
+      reset();
+      updateMap();
+    }
+  }
+
   function collectTreasure(t) {
     player.collected++;
     t.collected = true;
+
+    levelClear();
+
+    //setTimeout(function(){
+    //  nextSequence()
+    //}, 1000);
+    
   }
 
   function updateEntity(entity, dt) {
@@ -247,6 +279,7 @@
     renderTreasure(ctx, frame);
     renderPlayer(ctx, dt);
     renderMonsters(ctx, dt);
+    renderLava(ctx, frame)  //My Update
   }
 
   function renderMap(ctx) {
@@ -287,6 +320,24 @@
     }
   }
 
+  //My Update
+  function renderLava(ctx, frame){
+    ctx.fillStyle   = COLOR.GOLD;
+    ctx.globalAlpha = 0.25 + tweenTreasure(frame, 60);
+    var n, max, l;
+    for(n = 0, max = lava.length ; n < max ; n++) {
+      l = lava[n];
+      if (overlap(player.x, player.y, TILE, TILE, monster.x, monster.y, TILE, TILE)) {
+        killPlayer(player);
+    }
+    }
+    ctx.globalAlpha = 1;
+
+    /*if (overlap(player.x, player.y, TILE, TILE, monster.x, monster.y, TILE, TILE)) {
+          killPlayer(player);
+      }*/
+  }
+
   function renderTreasure(ctx, frame) {
     ctx.fillStyle   = COLOR.GOLD;
     ctx.globalAlpha = 0.25 + tweenTreasure(frame, 60);
@@ -321,6 +372,7 @@
       case "player"   : player = entity; break;
       case "monster"  : monsters.push(entity); break;
       case "treasure" : treasure.push(entity); break;
+      case "lava"     : lava.push(entity); break;  //My Update
       }
     }
 
@@ -333,6 +385,8 @@
     entity.y        = obj.y;
     entity.dx       = 0;
     entity.dy       = 0;
+    entity.width    = obj.width;  //My Update
+    entity.height   = obj.height; //My Update
     entity.gravity  = METER * (obj.properties.gravity || GRAVITY);
     entity.maxdx    = METER * (obj.properties.maxdx   || MAXDX);
     entity.maxdy    = METER * (obj.properties.maxdy   || MAXDY);
@@ -342,6 +396,7 @@
     entity.monster  = obj.type == "monster";
     entity.player   = obj.type == "player";
     entity.treasure = obj.type == "treasure";
+    entity.lava     = obj.type == "lava"; //My Update
     entity.left     = obj.properties.left;
     entity.right    = obj.properties.right;
     entity.start    = { x: obj.x, y: obj.y }
@@ -375,10 +430,19 @@
   document.addEventListener('keydown', function(ev) { return onkey(ev, ev.keyCode, true);  }, false);
   document.addEventListener('keyup',   function(ev) { return onkey(ev, ev.keyCode, false); }, false);
 
-  get("level.json", function(req) {
-    setup(JSON.parse(req.responseText));
-    frame();
-  });
+  //canvas.style.backgroundColor = "blue";
+
+  $("#start").on("click", function(){
+    $("#display").slideToggle();
+    setTimeout(function(){
+      $("#canvas").css("display", "inline-block");
+      
+    }, 500)
+    updateMap();
+  })
 
 })();
+
+
+
 
